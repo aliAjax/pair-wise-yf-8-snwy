@@ -168,6 +168,13 @@ label {
   align-items: start;
 }
 
+.column-main {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -301,6 +308,71 @@ label {
   gap: 9px;
 }
 
+.splice-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.6fr) repeat(2, minmax(110px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.splice-form button {
+  white-space: nowrap;
+}
+
+.splice-error {
+  margin: 0 0 10px;
+  border: 1px solid rgba(181, 77, 72, 0.35);
+  border-radius: 6px;
+  background: rgba(181, 77, 72, 0.08);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.splice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.splice-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 9px 10px;
+}
+
+.splice-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.splice-route strong {
+  color: var(--ink);
+}
+
+.splice-item button {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  flex: none;
+}
+
+.splice-badge {
+  background: rgba(212, 155, 53, 0.18);
+  color: #8a621d;
+}
+
 .warning-item {
   border: 1px solid rgba(181, 77, 72, 0.28);
   border-radius: 8px;
@@ -351,5 +423,9 @@ label {
 
   .segment-actions button {
     width: 100%;
+  }
+
+  .splice-form {
+    grid-template-columns: 1fr;
   }
 }

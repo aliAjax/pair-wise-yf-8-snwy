@@ -36,6 +36,8 @@ const defaultState = {
 };
 
 let state = loadState();
+let splices = SpliceStore.load();
+let availablePairs = [];
 let draggedId = null;
 
 const els = {
@@ -51,6 +53,12 @@ const els = {
   noteInput: document.querySelector("#noteInput"),
   segmentList: document.querySelector("#segmentList"),
   warningList: document.querySelector("#warningList"),
+  spliceForm: document.querySelector("#spliceForm"),
+  splicePair: document.querySelector("#splicePair"),
+  overlapInput: document.querySelector("#overlapInput"),
+  cueInput: document.querySelector("#cueInput"),
+  spliceError: document.querySelector("#spliceError"),
+  spliceList: document.querySelector("#spliceList"),
   totalDuration: document.querySelector("#totalDuration"),
   damageCount: document.querySelector("#damageCount"),
   segmentCount: document.querySelector("#segmentCount"),
@@ -81,6 +89,18 @@ function getFilteredSegments() {
   });
 }
 
+// 当前可见且可放映片段之间的相邻接续点，接续表只认这些位置。
+function getVisiblePairs() {
+  const projectable = getFilteredSegments().filter(SpliceJudge.isProjectable);
+  return SpliceJudge.adjacentPairs(projectable);
+}
+
+// 拖动、筛选或删段后，剔除已经不再相邻的接续，原片段顺序由各自操作负责。
+function syncSplices() {
+  availablePairs = getVisiblePairs();
+  splices = SpliceStore.prune(splices, availablePairs);
+}
+
 function renderStats() {
   const total = state.segments.reduce((sum, item) => sum + Number(item.duration), 0);
   const damaged = state.segments.filter((item) => item.damage !== "完好").length;
@@ -96,6 +116,7 @@ function renderList() {
       .map((item, index) => {
         const realIndex = state.segments.findIndex((segment) => segment.id === item.id);
         const hasDamage = item.damage !== "完好";
+        const outgoing = splices.find((splice) => splice.fromId === item.id);
         return `
           <article class="segment-card" draggable="true" data-id="${item.id}">
             <div class="thumb">
@@ -109,6 +130,7 @@ function renderList() {
               <div class="segment-title">
                 <strong>${realIndex + 1}. ${escapeHtml(item.code)}</strong>
                 <span>${formatDuration(item.duration)}</span>
+                ${outgoing ? `<span class="tag splice-badge">接续重叠 ${outgoing.overlap} 秒</span>` : ""}
               </div>
               <div class="tag-row">
                 <span class="tag">${escapeHtml(item.shift)}</span>
@@ -144,12 +166,106 @@ function renderWarnings() {
       .join("") || `<p class="empty">当前清单没有颜色偏移或破损提醒。</p>`;
 }
 
+function renderSpliceForm() {
+  const registered = new Set(splices.map((splice) => SpliceJudge.pairKey(splice.fromId, splice.toId)));
+  if (availablePairs.length === 0) {
+    els.splicePair.innerHTML = `<option value="">当前没有可登记的相邻接续点</option>`;
+    els.splicePair.disabled = true;
+    return;
+  }
+  els.splicePair.disabled = false;
+  els.splicePair.innerHTML = availablePairs
+    .map((pair, index) => {
+      const key = SpliceJudge.pairKey(pair.fromId, pair.toId);
+      const shorter = Math.min(pair.fromDuration, pair.toDuration);
+      const label = `${pair.fromCode} → ${pair.toCode}（较短片段 ${shorter} 秒）`;
+      return `<option value="${index}" ${registered.has(key) ? "disabled" : ""}>${registered.has(key) ? "已登记：" : ""}${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
+
+function renderSplices() {
+  if (splices.length === 0) {
+    els.spliceList.innerHTML = `<p class="empty">还没有登记接续。只有相邻且可放映的片段才能接续。</p>`;
+    return;
+  }
+  els.spliceList.innerHTML = availablePairs
+    .map((pair) => {
+      const key = SpliceJudge.pairKey(pair.fromId, pair.toId);
+      return splices.find((splice) => SpliceJudge.pairKey(splice.fromId, splice.toId) === key);
+    })
+    .filter(Boolean)
+    .map((splice) => {
+      const pair = availablePairs.find(
+        (item) => SpliceJudge.pairKey(item.fromId, item.toId) === SpliceJudge.pairKey(splice.fromId, splice.toId)
+      );
+      return `
+        <div class="splice-item" data-splice-id="${splice.id}">
+          <div class="splice-route">
+            <strong>${escapeHtml(pair.fromCode)} → ${escapeHtml(pair.toCode)}</strong>
+            <span>重叠 <strong>${splice.overlap}</strong> 秒</span>
+            <span>片尾信号距片尾 <strong>${splice.cueDistance}</strong> 秒</span>
+          </div>
+          <button type="button" title="删除接续" data-splice-delete="${splice.id}">×</button>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function showSpliceError(message) {
+  els.spliceError.textContent = message;
+  els.spliceError.hidden = false;
+}
+
+function addSplice(event) {
+  event.preventDefault();
+  const pair = availablePairs[Number(els.splicePair.value)];
+  if (!pair) {
+    showSpliceError("请选择当前相邻的接续点。");
+    return;
+  }
+  const result = SpliceJudge.validate({
+    overlap: els.overlapInput.value,
+    cueDistance: els.cueInput.value,
+    fromDuration: pair.fromDuration,
+    toDuration: pair.toDuration
+  });
+  // 校验不通过时直接返回：接续表与片段顺序都保持原样。
+  if (!result.ok) {
+    showSpliceError(`未保存：${result.reasons.join("；")}。`);
+    return;
+  }
+  splices = SpliceStore.add(splices, {
+    id: crypto.randomUUID(),
+    fromId: pair.fromId,
+    toId: pair.toId,
+    overlap: result.overlap,
+    cueDistance: result.cueDistance
+  });
+  els.spliceError.hidden = true;
+  renderList();
+  renderSpliceForm();
+  renderSplices();
+}
+
+function removeSplice(id) {
+  splices = SpliceStore.remove(splices, id);
+  renderList();
+  renderSpliceForm();
+  renderSplices();
+}
+
 function renderAll() {
+  syncSplices();
   saveState();
   els.reelTitle.value = state.reelTitle;
   renderStats();
   renderList();
   renderWarnings();
+  renderSpliceForm();
+  renderSplices();
+  els.spliceError.hidden = true;
 }
 
 function formatDuration(seconds) {
@@ -205,6 +321,22 @@ function exportList() {
     "",
     ...state.segments.map((item, index) => `${index + 1}. ${item.code}｜${formatDuration(item.duration)}｜${item.shift}｜${item.damage}｜${item.note || "无备注"}`)
   ];
+
+  // 导出按当前放映顺序写出每处接续的重叠秒数，只包含仍然有效的接续。
+  const projectable = state.segments.filter(SpliceJudge.isProjectable);
+  const exportPairs = SpliceJudge.adjacentPairs(projectable);
+  const spliceLines = exportPairs
+    .map((pair) => {
+      const splice = splices.find(
+        (item) => SpliceJudge.pairKey(item.fromId, item.toId) === SpliceJudge.pairKey(pair.fromId, pair.toId)
+      );
+      return splice
+        ? `接续 ${pair.fromCode} → ${pair.toCode}｜重叠 ${splice.overlap} 秒｜信号距片尾 ${splice.cueDistance} 秒`
+        : "";
+    })
+    .filter(Boolean);
+  lines.push("", "双机接续表：", ...(spliceLines.length ? spliceLines : ["（暂无接续）"]));
+
   const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -226,10 +358,21 @@ els.reelTitle.addEventListener("input", () => {
   state.reelTitle = els.reelTitle.value;
   saveState();
 });
-els.colorFilter.addEventListener("change", renderList);
-els.searchInput.addEventListener("input", renderList);
+// 筛选改变可见顺序，可能让原接续不再相邻，统一走 renderAll 做失效清理。
+els.colorFilter.addEventListener("change", renderAll);
+els.searchInput.addEventListener("input", renderAll);
 els.segmentForm.addEventListener("submit", addSegment);
 els.exportBtn.addEventListener("click", exportList);
+els.spliceForm.addEventListener("submit", addSplice);
+els.spliceList.addEventListener("click", (event) => {
+  const remove = event.target.closest("[data-splice-delete]");
+  if (remove) removeSplice(remove.dataset.spliceDelete);
+});
+[els.overlapInput, els.cueInput, els.splicePair].forEach((input) => {
+  input.addEventListener("input", () => {
+    els.spliceError.hidden = true;
+  });
+});
 
 els.segmentList.addEventListener("click", (event) => {
   const up = event.target.closest("[data-move-up]");

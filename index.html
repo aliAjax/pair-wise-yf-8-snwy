@@ -96,12 +96,38 @@
           </form>
         </aside>
 
-        <section class="panel list-panel">
-          <div class="panel-head">
-            <h2>放映顺序</h2>
-            <span>拖拽片段调整顺序</span>
-          </div>
-          <div id="segmentList" class="segment-list"></div>
+        <section class="column-main">
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h2>放映顺序</h2>
+              <span>拖拽片段调整顺序</span>
+            </div>
+            <div id="segmentList" class="segment-list"></div>
+          </section>
+
+          <section class="panel splice-panel">
+            <div class="panel-head">
+              <h2>双机接续表</h2>
+              <span>登记相邻片段的换片重叠与片尾信号</span>
+            </div>
+            <form id="spliceForm" class="splice-form">
+              <label>
+                接续点
+                <select id="splicePair" required></select>
+              </label>
+              <label>
+                重叠秒数
+                <input id="overlapInput" type="number" min="0" step="0.1" value="3" required />
+              </label>
+              <label>
+                信号距片尾秒数
+                <input id="cueInput" type="number" min="0" step="0.1" value="6" required />
+              </label>
+              <button class="primary" type="submit">登记接续</button>
+            </form>
+            <p id="spliceError" class="splice-error" hidden></p>
+            <div id="spliceList" class="splice-list"></div>
+          </section>
         </section>
 
         <aside class="panel warning-panel">
@@ -111,6 +137,8 @@
       </section>
     </main>
 
+    <script src="splice.js"></script>
+    <script src="splice-store.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
