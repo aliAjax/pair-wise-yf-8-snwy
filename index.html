@@ -109,8 +109,20 @@
           <div id="warningList" class="warning-list"></div>
         </aside>
       </section>
+
+      <section class="panel changeover-panel">
+        <div class="panel-head">
+          <h2>双机换片接续表</h2>
+          <span>在相邻可放映片段之间登记重叠秒数与信号距片尾秒数</span>
+        </div>
+        <div id="changeoverList" class="changeover-list"></div>
+        <div id="changeoverStale" class="changeover-stale"></div>
+      </section>
     </main>
 
+    <script src="changeover.js"></script>
+    <script src="changeoverStore.js"></script>
+    <script src="changeoverUI.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -125,6 +125,7 @@ function renderList() {
         `;
       })
       .join("") || `<p class="empty">没有符合筛选的片段。</p>`;
+  ChangeoverUI.render();
 }
 
 function renderWarnings() {
@@ -205,6 +206,19 @@ function exportList() {
     "",
     ...state.segments.map((item, index) => `${index + 1}. ${item.code}｜${formatDuration(item.duration)}｜${item.shift}｜${item.damage}｜${item.note || "无备注"}`)
   ];
+  const changeovers = ChangeoverStore.all();
+  if (changeovers.length) {
+    const viewSegments = getFilteredSegments();
+    lines.push("", "双机换片接续：");
+    changeovers.forEach((record, index) => {
+      const from = state.segments.find((item) => item.id === record.fromId);
+      const to = state.segments.find((item) => item.id === record.toId);
+      const active = from && to && ChangeoverLogic.isAdjacent(viewSegments, record.fromId, record.toId);
+      lines.push(
+        `${index + 1}. ${from ? from.code : "已删除片段"} → ${to ? to.code : "已删除片段"}｜重叠 ${record.overlap} 秒｜信号距片尾 ${record.signal} 秒${active ? "" : "｜已失效"}`
+      );
+    });
+  }
   const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -266,6 +280,12 @@ els.segmentList.addEventListener("dragover", (event) => {
   const [item] = state.segments.splice(fromIndex, 1);
   state.segments.splice(toIndex, 0, item);
   renderAll();
+});
+
+ChangeoverUI.init({
+  getViewSegments: () => getFilteredSegments(),
+  getSegment: (id) => state.segments.find((item) => item.id === id),
+  getPosition: (id) => state.segments.findIndex((item) => item.id === id) + 1
 });
 
 renderAll();

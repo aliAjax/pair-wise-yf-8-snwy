@@ -320,6 +320,86 @@ label {
   line-height: 1.5;
 }
 
+.changeover-panel {
+  margin-top: 16px;
+}
+
+.changeover-list,
+.changeover-stale {
+  display: grid;
+  gap: 10px;
+}
+
+.changeover-stale {
+  margin-top: 12px;
+}
+
+.changeover-stale h3 {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.changeover-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 10px;
+}
+
+.changeover-row.stale {
+  border-style: dashed;
+  background: rgba(213, 209, 195, 0.35);
+}
+
+.changeover-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 220px;
+  align-self: center;
+}
+
+.changeover-arrow {
+  color: var(--red);
+  font-weight: 900;
+}
+
+.changeover-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.changeover-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.changeover-row input {
+  width: 96px;
+}
+
+.changeover-msg {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.changeover-msg:empty {
+  display: none;
+}
+
 @media (max-width: 1120px) {
   .hero {
     align-items: stretch;
